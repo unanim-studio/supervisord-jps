@@ -1,0 +1,105 @@
+---
+jpsType: update
+jpsVersion: 1.1
+
+targetNodes:
+  nodeType:
+  - nginxphp-dockerized
+
+categories:
+- apps/dev-and-admin-tools
+
+name: Supervisor
+version: 3.1.4
+logo: https://raw.githubusercontent.com/elastx/supervisord-jps/master/logo.png
+homepage: http://supervisord.org/
+description:
+  short: "Supervisor: A Process Control System"
+  text: "Supervisor is a client/server system that allows its users to monitor and control a number of processes on UNIX-like operating systems."
+
+onInstall:
+ - addSupervisor
+ - prepareSupervisorConfiguration
+ - startSupervisor
+
+onAfterRedeployContainer:
+ - addSupervisor
+ - prepareSupervisorConfiguration
+ - startSupervisor
+
+onUninstall: removeSupervisor
+
+actions:
+  addSupervisor:
+    - executeShellCommands:
+      - nodeMission: cp
+        commands:
+        - yum install -y supervisor
+        - chmod 0755 /var/run/supervisor
+        - mkdir /var/www/webroot/supervisord.d
+        - chown 700:700 /var/www/webroot/supervisord.d
+        user: root
+
+  prepareSupervisorConfiguration:
+    writeFile:
+    - nodeGroup: cp
+      path: /tmp/supervisord.conf
+      body: |
+        [unix_http_server]
+        file=/var/run/supervisor/supervisor.sock   ; (the path to the socket file)
+        chmod=0775                 ; sockef file mode (default 0700)
+        chown=root:700       ; socket file uid:gid owner
+
+        [supervisord]
+        logfile=/var/log/supervisor/supervisord.log  ; (main log file;default $CWD/supervisord.log)
+        logfile_maxbytes=50MB       ; (max main logfile bytes b4 rotation;default 50MB)
+        logfile_backups=10          ; (num of main logfile rotation backups;default 10)
+        loglevel=info               ; (log level;default info; others: debug,warn,trace)
+        pidfile=/var/run/supervisord.pid ; (supervisord pidfile;default supervisord.pid)
+        nodaemon=false              ; (start in foreground if true;default false)
+        minfds=1024                 ; (min. avail startup file descriptors;default 1024)
+        minprocs=200                ; (min. avail process descriptors;default 200)
+
+        [rpcinterface:supervisor]
+        supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+        [supervisorctl]
+        serverurl=unix:///var/run/supervisor/supervisor.sock ; use a unix:// URL  for a unix socket
+
+        [include]
+        files = /var/www/webroot/supervisord.d/*.ini
+
+  startSupervisor:
+    - executeShellCommands:
+      - nodeMission: cp
+        commands:
+        - cp -f /tmp/supervisord.conf /etc/supervisord.conf
+        - systemctl enable supervisord
+        - systemctl start supervisord
+        user: root
+
+  removeSupervisor:
+    - executeShellCommands:
+      - nodeMission: cp
+        commands:
+        - systemctl disable supervisord
+        - systemctl stop supervisord
+        - yum remove -y supervisor
+        user: root
+
+  updateSupervisor:
+    - executeShellCommands:
+      - nodeMission: cp
+        commands:
+        - supervisorctl reload
+        user: root
+
+
+menu:
+  - caption: "Reload Supervisor"
+    loadingText: "Updating"
+    action: updateSupervisor
+    confirmText: "Reload supervisor"
+    successText: "Supervisor reloaded"
+
+success: "The installation has been successfully completed."
