@@ -31,14 +31,12 @@ onUninstall: removeSupervisor
 
 actions:
   addSupervisor:
-    - executeShellCommands:
-      - nodeMission: cp
-        commands:
-        - yum install -y supervisor
-        - chmod 0755 /var/run/supervisor
-        - mkdir /var/www/webroot/supervisord.d
-        - chown 700:700 /var/www/webroot/supervisord.d
-        user: root
+    cmd[cp]:
+      - yum install -y supervisor
+      - chmod 0755 /var/run/supervisor
+      - mkdir /var/www/webroot/supervisord.d
+      - chown 700:700 /var/www/webroot/supervisord.d
+    user: root
 
   prepareSupervisorConfiguration:
     writeFile:
@@ -70,29 +68,23 @@ actions:
         files = /var/www/webroot/supervisord.d/*.ini
 
   startSupervisor:
-    - executeShellCommands:
-      - nodeMission: cp
-        commands:
-        - cp -f /tmp/supervisord.conf /etc/supervisord.conf
-        - systemctl enable supervisord
-        - systemctl start supervisord
-        user: root
+    cmd[cp]:
+      - cp -f /tmp/supervisord.conf /etc/supervisord.conf
+      - systemctl enable supervisord
+      - systemctl start supervisord
+    user: root
 
   removeSupervisor:
-    - executeShellCommands:
-      - nodeMission: cp
-        commands:
-        - systemctl disable supervisord
-        - systemctl stop supervisord
-        - yum remove -y supervisor
-        user: root
+    cmd[cp]:
+      - systemctl disable supervisord
+      - systemctl stop supervisord
+      - yum remove -y supervisor
+    user: root
 
   updateSupervisor:
-    - executeShellCommands:
-      - nodeMission: cp
-        commands:
-        - supervisorctl reload
-        user: root
+    cmd[cp]:
+      - supervisorctl reload
+    user: root
 
 
 menu:
