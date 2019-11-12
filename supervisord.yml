@@ -5,6 +5,7 @@ jpsVersion: 1.1
 targetNodes:
   nodeType:
   - nginxphp-dockerized
+  - apache-python
 
 categories:
 - apps/dev-and-admin-tools
@@ -31,16 +32,16 @@ onUninstall: removeSupervisor
 
 actions:
   addSupervisor:
-    cmd[cp]:
+    cmd[${targetNodes.nodeGroup}]:
       - yum install -y supervisor
       - chmod 0755 /var/run/supervisor
-      - mkdir /var/www/webroot/supervisord.d
+      - mkdir -p /var/www/webroot/supervisord.d
       - chown 700:700 /var/www/webroot/supervisord.d
     user: root
 
   prepareSupervisorConfiguration:
     writeFile:
-    - nodeGroup: cp
+    - nodeGroup: ${targetNodes.nodeGroup}
       path: /tmp/supervisord.conf
       body: |
         [unix_http_server]
@@ -68,21 +69,25 @@ actions:
         files = /var/www/webroot/supervisord.d/*.ini
 
   startSupervisor:
-    cmd[cp]:
+    cmd[${targetNodes.nodeGroup}]:
+      - sed -i '1 s/python$/python2/' /usr/bin/supervisorctl
+      - sed -i '1 s/python$/python2/' /usr/bin/supervisord
       - cp -f /tmp/supervisord.conf /etc/supervisord.conf
+      - cp -f /tmp/supervisord.service /usr/lib/systemd/system/supervisord.service
+      - systemctl daemon-reload
       - systemctl enable supervisord
       - systemctl start supervisord
     user: root
 
   removeSupervisor:
-    cmd[cp]:
+    cmd[${targetNodes.nodeGroup}]:
       - systemctl disable supervisord
       - systemctl stop supervisord
       - yum remove -y supervisor
     user: root
 
   updateSupervisor:
-    cmd[cp]:
+    cmd[${targetNodes.nodeGroup}]:
       - supervisorctl reload
     user: root
 
